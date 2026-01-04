@@ -42,7 +42,7 @@ def train_sarsa(level_id=1, episodes=EPISODES, alpha=ALPHA, gamma=GAMMA):
     """Train a SARSA agent on the given level and return Q-values.
 
     Non-visual: prints per-episode summary only. UI/visualization should be
-    implemented in the caller (e.g., `main.py`) if live HUD is required.
+    implemented in the caller (e.g., `main.py`).
     """
     random.seed(SEED)
     env = GridWorld(LEVELS[level_id])
