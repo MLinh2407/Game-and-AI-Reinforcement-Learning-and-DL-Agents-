@@ -4,6 +4,7 @@ import random
 class GridWorld:
     def __init__(self, grid):
         self.original_grid = grid
+        self.death_reward = 0
         self.reset()
 
     def reset(self):
@@ -12,6 +13,7 @@ class GridWorld:
         self.agent_pos = [0, 0]
         self.has_key = False
         self.done = False
+        self.death_reward = 0
 
         # Assign a random seed to each monster tile
         self.monster_seeds = {}
@@ -52,9 +54,11 @@ class GridWorld:
                 # Fire and monster end the episode
                 elif tile == FIRE:
                     self.done = True
-                    
+                    self.death_reward = -1
+
                 elif tile == MONSTER:
                     self.done = True
+                    self.death_reward = -1
                     
                 # Key enables chest reward
                 elif tile == KEY:
@@ -73,7 +77,7 @@ class GridWorld:
         if self.all_collected():
             self.done = True
 
-        return self.get_state(), reward, self.done
+        return self.get_state(), self.death_reward if self.death_reward != 0 else reward, self.done
 
     # Monsters has a 40% chance to move after agent action
     def update_monsters(self):
@@ -94,6 +98,7 @@ class GridWorld:
                         # Monster hit agent, episode ends
                         if [nx,ny] == self.agent_pos:
                             self.done = True
+                            self.death_reward = -1
                             self.grid[y][x] = FLOOR
                             self.grid[ny][nx] = MONSTER
                             monsters[(nx,ny)] = seed

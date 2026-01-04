@@ -49,9 +49,25 @@ def main():
         # turn-based speed
         clock.tick(8)
 
+        action = None
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    action = 2  # LEFT
+                elif event.key == pygame.K_RIGHT:
+                    action = 3  # RIGHT
+                elif event.key == pygame.K_UP:
+                    action = 0  # UP
+                elif event.key == pygame.K_DOWN:
+                    action = 1  # DOWN
+
+        if action is not None:
+            state, reward, done = env.step(action)
+            if done:
+                print(f"Episode ended with reward: {reward}")
+                env.reset()
 
         # Render environment
         render(game_surface, env, tiles, monsters, agent)
