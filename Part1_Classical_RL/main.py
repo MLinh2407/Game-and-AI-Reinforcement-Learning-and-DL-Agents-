@@ -44,10 +44,10 @@ def main():
     game_surface = pygame.Surface((GAME_WIDTH, GAME_HEIGHT))
 
     # -------------------------
-    # If level 1 or 3, run SARSA training with HUD in main (V/R controls)
+    # If level 1, run SARSA training with HUD in main (V/R controls)
     # -------------------------
     visualize_policy = False
-    if level_id == 1 or level_id == 3:
+    if level_id == 1:
         Q = {}
         fast_mode = False
         training_running = True
