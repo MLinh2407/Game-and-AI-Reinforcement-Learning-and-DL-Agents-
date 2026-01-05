@@ -96,7 +96,7 @@ def main():
                 # HUD overlay (top-left)
                 hud = [
                     f"Ep {ep+1}/{EPISODES}  step {step}  eps {epsilon:.3f}",
-                    f"Apples left {sum(1 for row in env.grid for t in row if t==APPLE)}",
+                    f"Rewards left {env.rewards_left()}",
                     f"Return {total_reward:.2f}  (SARSA training)",
                     "V to toggles fast mode. R to resets. Close window to stop training."
                 ]

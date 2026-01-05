@@ -118,10 +118,10 @@ class GridWorld:
                 
         self.monster_seeds = monsters
         
+    def rewards_left(self):
+        """Return number of remaining reward tiles (apples and chests)."""
+        return sum(1 for row in self.grid for t in row if t in (APPLE, CHEST))
+
     # Check if all apples and chests are collected
     def all_collected(self):
-        for row in self.grid:
-            for tile in row:
-                if tile in (APPLE, CHEST):
-                    return False
-        return True
+        return self.rewards_left() == 0
