@@ -1,5 +1,6 @@
 from constants import *
 import random
+from config import DEATH_PENALTY
 
 class GridWorld:
     def __init__(self, grid):
@@ -23,7 +24,25 @@ class GridWorld:
         return self.get_state()
 
     def get_state(self):
-        return tuple(self.agent_pos)
+        # State includes agent position, whether agent has a key, and nearby hazard flags
+        x, y = self.agent_pos
+        up = 0
+        down = 0
+        left = 0
+        right = 0
+
+        # helper to test hazard tiles
+        def is_hazard(nx, ny):
+            if 0 <= ny < len(self.grid) and 0 <= nx < len(self.grid[0]):
+                return self.grid[ny][nx] in (FIRE, MONSTER)
+            return False
+
+        up = 1 if is_hazard(x, y-1) else 0
+        down = 1 if is_hazard(x, y+1) else 0
+        left = 1 if is_hazard(x-1, y) else 0
+        right = 1 if is_hazard(x+1, y) else 0
+
+        return (x, y, int(self.has_key), up, down, left, right)
 
     # Apply an action and update the environment
     def step(self, action):
@@ -49,11 +68,13 @@ class GridWorld:
                     reward = 1
                     self.grid[ny][nx] = FLOOR
 
-                # Fire and monster end the episode
+                # Fire and monster end the episode and should penalize the agent
                 elif tile == FIRE:
+                    reward = DEATH_PENALTY
                     self.done = True
-                    
+
                 elif tile == MONSTER:
+                    reward = DEATH_PENALTY
                     self.done = True
                     
                 # Key enables chest reward
@@ -68,6 +89,10 @@ class GridWorld:
         #After agent action, monsters may move
         if not self.done:
             self.update_monsters()
+
+            # If a monster moved onto the agent, it's a death with penalty
+            if self.done:
+                reward = DEATH_PENALTY
             
         # End episode if all collectibles are gone
         if self.all_collected():
