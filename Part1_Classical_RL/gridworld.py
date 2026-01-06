@@ -1,5 +1,6 @@
 from constants import *
 import random
+import config
 
 class GridWorld:
     def __init__(self, grid):
@@ -13,7 +14,7 @@ class GridWorld:
         self.has_key = False
         self.done = False
 
-        # Assign a random seed to each monster tile
+        # Assign a stable random seed to each monster
         self.monster_seeds = {}
         for y, row in enumerate(self.grid):
             for x, tile in enumerate(row):
@@ -22,10 +23,17 @@ class GridWorld:
 
         return self.get_state()
 
+    # State representation
     def get_state(self):
-        return tuple(self.agent_pos)
+        """
+        State includes:
+        - Agent x position
+        - Agent y position
+        - Whether the agent has the key (0 or 1)
+        """
+        return (self.agent_pos[0], self.agent_pos[1], int(self.has_key))
 
-    # Apply an action and update the environment
+    # Environment step
     def step(self, action):
         if self.done:
             return self.get_state(), 0, True
@@ -36,89 +44,94 @@ class GridWorld:
 
         reward = 0
 
-        # Check grid boundaries
+        # Check boundaries
         if 0 <= ny < len(self.grid) and 0 <= nx < len(self.grid[0]):
             tile = self.grid[ny][nx]
 
-            # Rock tiles block movement
+            # Rocks block movement
             if tile != ROCK:
                 self.agent_pos = [nx, ny]
 
-                # Apple gives reward
+                # Apple 
                 if tile == APPLE:
                     reward = 1
                     self.grid[ny][nx] = FLOOR
 
-                # Fire and monster end the episode
+                # Fire = death penalty
                 elif tile == FIRE:
+                    reward = config.DEATH_PENALTY
                     self.done = True
-                    
+
+                # Monster = death penalty
                 elif tile == MONSTER:
+                    reward = config.DEATH_PENALTY
                     self.done = True
-                    
-                # Key enables chest reward
+
+                # Key
                 elif tile == KEY:
                     self.has_key = True
                     self.grid[ny][nx] = FLOOR
 
+                # Chest (only works if key collected)
                 elif tile == CHEST and self.has_key:
                     reward = 2
                     self.grid[ny][nx] = FLOOR
 
-        #After agent action, monsters may move
+        # Monsters move after agent action
         if not self.done:
             self.update_monsters()
-            
-        # End episode if all collectibles are gone
+
+        # If monster moved into agent, apply death penalty
+        if self.done:
+            reward = config.DEATH_PENALTY
+
+        # End episode if all collectibles obtained
         if self.all_collected():
             self.done = True
 
         return self.get_state(), reward, self.done
 
-    # Monsters has a 40% chance to move after agent action
+    # Monster movement (stochastic)
     def update_monsters(self):
-        monsters = {}
-        for (x,y), seed in self.monster_seeds.items():
-            #40% chance monster attempt to move
+        new_monsters = {}
+
+        for (x, y), seed in self.monster_seeds.items():
+            # 40% chance monster attempts to move
             if random.random() < 0.4:
-            
-                # Try random directions
                 directions = list(ACTIONS.values())
                 random.shuffle(directions)
-                
+
                 moved = False
                 for dx, dy in directions:
                     nx, ny = x + dx, y + dy
-                    
+
                     if 0 <= ny < len(self.grid) and 0 <= nx < len(self.grid[0]):
-                        # Monster hit agent, episode ends
-                        if [nx,ny] == self.agent_pos:
+                        # Monster hits agent
+                        if [nx, ny] == self.agent_pos:
                             self.done = True
                             self.grid[y][x] = FLOOR
                             self.grid[ny][nx] = MONSTER
-                            monsters[(nx,ny)] = seed
+                            new_monsters[(nx, ny)] = seed
                             moved = True
                             break
-                        
+
                         # Monster moves to empty floor
                         if self.grid[ny][nx] == FLOOR:
                             self.grid[y][x] = FLOOR
                             self.grid[ny][nx] = MONSTER
-                            monsters[(nx,ny)] = seed
+                            new_monsters[(nx, ny)] = seed
                             moved = True
                             break
-            
-                # Monster failed to move            
+
                 if not moved:
-                    monsters[(x,y)] = seed
-        
+                    new_monsters[(x, y)] = seed
             else:
-                # 60% chance monster stays in place
-                monsters[(x,y)] = seed
-                
-        self.monster_seeds = monsters
-        
-    # Check if all apples and chests are collected
+                # Monster stays in place
+                new_monsters[(x, y)] = seed
+
+        self.monster_seeds = new_monsters
+
+    # Termination condition
     def all_collected(self):
         for row in self.grid:
             for tile in row:

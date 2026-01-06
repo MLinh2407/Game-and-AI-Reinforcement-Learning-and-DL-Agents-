@@ -1,8 +1,4 @@
-# =========================
-# Grid & Tile Configuration
-# =========================
-
-TILE_SIZE = 80
+TILE_SIZE = 65
 
 # Tile IDs
 FLOOR   = 0
