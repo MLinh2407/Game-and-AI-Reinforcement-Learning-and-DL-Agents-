@@ -8,6 +8,8 @@ EPSILON_END = 0.05
 # Gradually reduce exploration during the first 85% of training
 EPSILON_DECAY_EPISODES = int(0.85 * EPISODES)
 
+INTRINSIC_REWARD_STRENGTH = 0.1
+
 DEATH_PENALTY = -1
 MAX_STEPS_PER_EPISODE = 500
 FPS_VISUAL = 30    

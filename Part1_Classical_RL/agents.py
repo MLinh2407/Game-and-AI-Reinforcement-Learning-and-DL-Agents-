@@ -20,6 +20,7 @@ class BaseAgent:
         self.actions = list(ACTIONS.keys())
         self.episode = 0
         self.step_count = 0
+        self.state_visits = {}
 
     # Ensure that a state exists in the Q-table
     def ensure_state(self, state):
@@ -52,6 +53,7 @@ class BaseAgent:
     def new_episode(self):
         self.episode += 1
         self.step_count = 0
+        self.state_visits = {}
         
     # Save the Q-table and episode counter
     def save(self, path):
@@ -74,12 +76,16 @@ class QLearningAgent(BaseAgent):
         self.ensure_state(state)
         self.ensure_state(next_state)
 
+        self.state_visits[state] = self.state_visits.get(state, 0) + 1
+        intrinsic_reward = config.INTRINSIC_REWARD_STRENGTH / np.sqrt(self.state_visits[state] + 1)
+        total_reward = reward + intrinsic_reward
+
         # Best possible future value from next state
         best_next = np.max(self.Q[next_state])
         
         # Temporal Difference update
         self.Q[state][action] += config.ALPHA * (
-            reward + config.GAMMA * best_next - self.Q[state][action]
+            total_reward + config.GAMMA * best_next - self.Q[state][action]
         )
         self.step_count += 1
 
@@ -88,8 +94,12 @@ class SarsaAgent(BaseAgent):
         self.ensure_state(state)
         self.ensure_state(next_state)
 
+        self.state_visits[state] = self.state_visits.get(state, 0) + 1
+        intrinsic_reward = config.INTRINSIC_REWARD_STRENGTH / np.sqrt(self.state_visits[state] + 1)
+        total_reward = reward + intrinsic_reward
+
         # TD target uses the next action actually chosen
-        td_target = reward + config.GAMMA * self.Q[next_state][next_action]
+        td_target = total_reward + config.GAMMA * self.Q[next_state][next_action]
         
         # Temporal Difference update
         self.Q[state][action] += config.ALPHA * (
