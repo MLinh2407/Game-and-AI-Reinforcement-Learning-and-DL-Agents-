@@ -56,10 +56,14 @@ def create_ui(tile_w):
     buttons["save"] = Button((tile_w + 40, 130, 160, 35), "Save Model")
     buttons["load"] = Button((tile_w + 220, 130, 160, 35), "Load Model")
 
+    # Intrinsic Reward Toggle (for Level 6)
+    buttons["intrinsic"] = Button((tile_w + 220, 325, 180, 35), "Intrinsic Reward")
+    buttons["intrinsic"].enabled = False
+    
     level_buttons = []
     for i in range(len(LEVELS)):
         x = tile_w + 40 + (i % 2) * 180
-        y = 200 + (i // 2) * 45
+        y = 190 + (i // 2) * 45
         level_buttons.append(Button((x, y, 160, 35), f"Level {i}"))
 
     return buttons, level_buttons
