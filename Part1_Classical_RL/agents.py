@@ -15,11 +15,12 @@ class BaseAgent:
     - Episode tracking
     - Saving/loading learned Q-values
     """
-    def __init__(self):
+    def __init__(self, epsilon_decay_episodes):
         self.Q = {}
         self.actions = list(ACTIONS.keys())
         self.episode = 0
         self.step_count = 0
+        self.epsilon_decay_episodes = epsilon_decay_episodes
 
     # Ensure that a state exists in the Q-table
     def ensure_state(self, state):
@@ -28,17 +29,16 @@ class BaseAgent:
 
     # Compute the current epsilon value for epsilon-greedy exploration
     def epsilon(self):
-        if self.episode >= config.EPSILON_DECAY_EPISODES:
+        if self.episode >= self.epsilon_decay_episodes:
             return config.EPSILON_END
-        decay = (config.EPSILON_START - config.EPSILON_END) / config.EPSILON_DECAY_EPISODES
+        decay = (config.EPSILON_START - config.EPSILON_END) / self.epsilon_decay_episodes
         return config.EPSILON_START - decay * self.episode
 
     def select_action(self, state):
         self.ensure_state(state)
-        eps = self.epsilon()
 
         # Exploration
-        if random.random() < eps:
+        if random.random() < self.epsilon():
             return random.choice(self.actions)
 
         # Exploitation

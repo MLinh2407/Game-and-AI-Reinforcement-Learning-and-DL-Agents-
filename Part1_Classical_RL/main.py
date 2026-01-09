@@ -28,7 +28,6 @@ def save_training_curve(rewards, algo, level_id):
         return
     
     window = 50
-
     os.makedirs("plots", exist_ok=True)
 
     plt.figure(figsize=(6, 4))
@@ -67,7 +66,7 @@ def main():
     PANEL_W = 420
 
     screen = pygame.display.set_mode((TILE_W + PANEL_W, TILE_H))
-    pygame.display.set_caption("Gridworld RL Trainer")
+    pygame.display.set_caption("Gridworld - Classical RL")
 
     # Load sprites and rendering assets
     tiles, monsters, agent_sprite = load_tiles()
@@ -82,7 +81,11 @@ def main():
     # Initial state
     level_id = 0
     algo_name = "Q_Learning"
-    agent = QLearningAgent()
+    
+    EPISODES = config.EPISODES_PER_LEVEL.get(level_id, config.DEFAULT_EPISODES)
+    EPSILON_DECAY = int(0.85 * EPISODES)
+    
+    agent = QLearningAgent(EPSILON_DECAY)
 
     # Initialize environment and agent state
     env = GridWorld(LEVELS[level_id])
@@ -125,15 +128,13 @@ def main():
                 # Algorithm selection
                 if buttons["q"].clicked(pos):
                     algo_name = "Q_Learning"
-                    agent = QLearningAgent()
-                    rewards.clear()
-                    episode_lengths.clear()
-                    paused = True
-                    training_done = False
-
                 if buttons["s"].clicked(pos):
                     algo_name = "SARSA"
-                    agent = SarsaAgent()
+
+                if buttons["q"].clicked(pos) or buttons["s"].clicked(pos):
+                    EPISODES = config.EPISODES_PER_LEVEL.get(level_id, config.DEFAULT_EPISODES)
+                    EPSILON_DECAY = int(0.85 * EPISODES)
+                    agent = QLearningAgent(EPSILON_DECAY) if algo_name == "Q_Learning" else SarsaAgent(EPSILON_DECAY)
                     rewards.clear()
                     episode_lengths.clear()
                     paused = True
@@ -143,6 +144,10 @@ def main():
                 for i, btn in enumerate(level_buttons):
                     if btn.clicked(pos) and level_id != i:
                         level_id = i
+                        EPISODES = config.EPISODES_PER_LEVEL.get(level_id, config.DEFAULT_EPISODES)
+                        EPSILON_DECAY = int(0.85 * EPISODES)
+
+                        agent = QLearningAgent(EPSILON_DECAY) if algo_name == "Q_Learning" else SarsaAgent(EPSILON_DECAY)
                         env = GridWorld(LEVELS[level_id])
                         state = env.reset()
                         action = agent.select_action(state)
@@ -153,8 +158,6 @@ def main():
                         steps = 0
                         paused = True
                         training_done = False
-
-                        agent = QLearningAgent() if algo_name == "Q_Learning" else SarsaAgent()
 
                 # Play or Pause training
                 if buttons["play"].clicked(pos):
@@ -202,7 +205,7 @@ def main():
                 agent.new_episode()
 
                 # Stop training and save training curve after configured number of episodes
-                if agent.episode >= config.EPISODES:
+                if agent.episode >= EPISODES:
                     training_done = True
                     paused = True
                     save_training_curve(rewards, algo_name, level_id)
@@ -235,7 +238,7 @@ def main():
         # Display training statistics
         draw_text(screen, f"Algorithm: {algo_name.upper()}", px, y); y += line
         draw_text(screen, f"Level: {level_id}", px, y); y += line
-        draw_text(screen, f"Episode: {agent.episode}/{config.EPISODES}", px, y); y += line
+        draw_text(screen, f"Episode: {agent.episode}/{EPISODES}", px, y); y += line
         draw_text(screen, f"Epsilon: {agent.epsilon():.3f}", px, y); y += line
         draw_text(screen, f"Episode Reward: {episode_reward}", px, y); y += line
 
