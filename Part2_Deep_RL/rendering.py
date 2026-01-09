@@ -27,6 +27,8 @@ class Renderer:
         self.spawner_sprite = None
         self.bullet_sprite = None
         self.assets_loaded = False
+        # UI buttons (created on initialize)
+        self.buttons = None
     
     # Initialize pygame window and load assets
     def initialize(self):
@@ -40,6 +42,14 @@ class Renderer:
                 (self.background, self.player_sprite, self.enemy_sprite, 
                  self.spawner_sprite, self.bullet_sprite) = load_assets()
                 self.assets_loaded = True
+
+            # Create UI buttons (right side)
+            if self.buttons is None:
+                try:
+                    from ui import create_ui
+                    self.buttons = create_ui(self.width)
+                except Exception:
+                    self.buttons = None
     
     def draw_background(self):
         if self.background is not None:
@@ -183,10 +193,39 @@ class Renderer:
         self.screen.blit(phase_text, (10, 35))
         self.screen.blit(enemies_text, (10, 60))
         self.screen.blit(spawners_text, (10, 85))
+
+    def draw_menu(self, mouse_pos):
+        """Draw right-side menu buttons if present."""
+        if not self.buttons:
+            return
+
+        # Update hover state
+        for b in self.buttons.values():
+            b.update_hover(mouse_pos)
+
+        # Header
+        header = self.font.render("Controls", True, config.COLOR_UI)
+        # Draw header box
+        x = self.width - 220
+        pygame.draw.rect(self.screen, (0, 0, 0), (x - 10, 10, 200, 220))
+        self.screen.blit(header, (x + 10, 12))
+
+        # Draw buttons
+        for b in self.buttons.values():
+            b.draw(self.screen, self.font)
+
+        # Current control label
+        try:
+            cur = next(k for k, v in self.buttons.items() if v.active)
+            label = self.font.render(f"Active: {cur}", True, config.COLOR_UI)
+            self.screen.blit(label, (x + 10, 220))
+        except StopIteration:
+            pass
     
-    def update_display(self):
+    def update_display(self, fps_scale=1):
         pygame.display.flip()
-        self.clock.tick(config.FPS)
+        # Allow fast-mode scaling when requested
+        self.clock.tick(int(config.FPS * fps_scale))
     
     def close(self):
         if self.screen is not None:

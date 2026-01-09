@@ -12,6 +12,7 @@ def test_environment(control_scheme='rotation'):
     # Create environment
     env = ArenaEnvironment(control_scheme=control_scheme, render_mode='human')
     obs, _ = env.reset()
+    print(f"Human mode: {env.human_mode}")
     
     running = True
     episode_count = 0
@@ -21,9 +22,35 @@ def test_environment(control_scheme='rotation'):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Forward clicks to environment UI handler
+                try:
+                    env.handle_click(event.pos)
+                except Exception:
+                    pass
+            elif event.type == pygame.KEYDOWN:
+                # Keyboard shortcuts
+                if event.key == pygame.K_h:
+                    try:
+                        env.toggle_human_mode()
+                    except Exception:
+                        pass
+                elif event.key == pygame.K_c:
+                    try:
+                        env.toggle_control()
+                    except Exception:
+                        pass
+                elif event.key == pygame.K_f:
+                    try:
+                        env.toggle_fast_mode()
+                    except Exception:
+                        pass
         
-        # Random action for testing
-        action = env.action_space.sample()
+        # Choose action: human keyboard or random
+        if env.human_mode:
+            action = env.get_human_action()
+        else:
+            action = env.action_space.sample()
         obs, reward, done, truncated, info = env.step(action)
         total_reward += reward
         env.render()
@@ -60,10 +87,10 @@ def test_both_controls():
 
 if __name__ == "__main__":
     # Test rotation control
-    test_environment(control_scheme='rotation')
+    #test_environment(control_scheme='rotation')
     
     # To test directional control instead, use:
-    # test_environment(control_scheme='directional')
+    test_environment(control_scheme='directional')
     
     # To test both sequentially:
     # test_both_controls()
