@@ -306,10 +306,10 @@ class ArenaEnvironment(gym.Env):
         # Player state (normalized)
         obs[0] = self.player.pos[0] / self.width
         obs[1] = self.player.pos[1] / self.height
-        obs[2] = self.player.vel[0] / 10.0
-        obs[3] = self.player.vel[1] / 10.0
+        obs[2] = self.player.vel[0] / config.PLAYER_MAX_SPEED
+        obs[3] = self.player.vel[1] / config.PLAYER_MAX_SPEED
         obs[4] = self.player.angle / (2 * np.pi)
-        
+
         # Nearest enemy
         nearest_enemy = self.nearest_enemy()
         if nearest_enemy is not None:
@@ -318,7 +318,10 @@ class ArenaEnvironment(gym.Env):
             angle = np.arctan2(diff[1], diff[0])
             obs[5] = distance / np.sqrt(self.width**2 + self.height**2)
             obs[6] = angle / (2 * np.pi)
-        
+        else:
+            obs[5] = 1.0
+            obs[6] = 0.0
+
         # Nearest spawner
         nearest_spawner = self.nearest_spawner()
         if nearest_spawner is not None:
@@ -327,11 +330,14 @@ class ArenaEnvironment(gym.Env):
             angle = np.arctan2(diff[1], diff[0])
             obs[7] = distance / np.sqrt(self.width**2 + self.height**2)
             obs[8] = angle / (2 * np.pi)
-        
+        else:
+            obs[7] = 1.0
+            obs[8] = 0.0
+
         # Health and phase
         obs[9] = self.player.health / self.player.max_health
         obs[10] = self.current_phase / 10.0
-        
+
         return obs
     
     # Render the environment
