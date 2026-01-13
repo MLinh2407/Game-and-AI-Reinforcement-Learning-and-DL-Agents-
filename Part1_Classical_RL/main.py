@@ -73,7 +73,7 @@ def save_training_curve(rewards, episode_lengths, algo, level_id, intrinsic_suff
     print(f"[Saved training curve] {path}")
 
 # Compute the maximum achievable environment reward for a level
-def level_max_env_reward(level_grid):
+def compute_level_max_env_reward(level_grid):
     total = 0
     for row in level_grid:
         for tile in row:
@@ -120,7 +120,7 @@ def main():
 
     # Initialize environment and agent state
     env = GridWorld(LEVELS[level_id])
-    level_max_env_reward = level_max_env_reward(LEVELS[level_id])
+    level_max_env_reward = compute_level_max_env_reward(LEVELS[level_id])
     state = env.reset()
     action = agent.select_action(state)
 
@@ -182,7 +182,7 @@ def main():
                         level_id = i
                         EPISODES = config.EPISODES_PER_LEVEL.get(level_id, config.DEFAULT_EPISODES)
                         EPSILON_DECAY = int(0.80 * EPISODES)
-                        level_max_env_reward = level_max_env_reward(LEVELS[level_id])
+                        level_max_env_reward = compute_level_max_env_reward(LEVELS[level_id])
 
                         use_intrinsic = False
                         buttons["intrinsic"].toggle = False
