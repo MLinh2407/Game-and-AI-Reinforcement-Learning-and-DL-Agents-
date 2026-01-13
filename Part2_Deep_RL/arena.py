@@ -50,6 +50,11 @@ class ArenaEnvironment(gym.Env):
         self.step_count = 0
         self.max_steps = config.MAX_STEPS
         
+        # Fast mode (affects rendering/step tick scaling)
+        self.fast_mode = False
+        # Human control mode: when True, player is controlled by keyboard
+        self.human_mode = False
+
         # Stats
         self.enemies_destroyed = 0
         self.spawners_destroyed = 0
@@ -171,17 +176,30 @@ class ArenaEnvironment(gym.Env):
             elif action == 4:
                 self.player.move_direction('right')
             elif action == 5:
-                reward += self.player_shoot()
+                # If human and directional and a recent click exists, use it as target
+                target = None
+                if self.human_mode and self.control_scheme == config.CONTROL_DIRECTIONAL and self.last_click_pos is not None:
+                    target = self.last_click_pos
+                    self.last_click_pos = None
+                reward += self.player_shoot(target_pos=target)
         
         return reward
     
     # Handle player shooting
-    def player_shoot(self):
+    def player_shoot(self, target_pos=None):
+        """Shoot a bullet. If target_pos provided and control scheme is directional,
+        aim towards that world coordinate. Otherwise, fall back to nearest enemy
+        for directional control or default angle for rotation control."""
         if self.player.can_shoot(self.step_count):
-            # Get nearest enemy for directional control
-            nearest_enemy = self.nearest_enemy()
-            target_pos = nearest_enemy.pos if nearest_enemy else None
-            
+            # If directional and target provided, use it; otherwise try nearest enemy
+            if self.control_scheme == config.CONTROL_DIRECTIONAL:
+                if target_pos is None:
+                    nearest_enemy = self.nearest_enemy()
+                    target_pos = nearest_enemy.pos if nearest_enemy else None
+            else:
+                # For rotation control, target_pos is ignored — shoot along facing angle
+                target_pos = None
+
             vel, angle = self.player.shoot_velocity(target_pos)
             bullet = Projectile(
                 self.player.pos[0], self.player.pos[1],
@@ -189,8 +207,169 @@ class ArenaEnvironment(gym.Env):
             )
             self.bullets.append(bullet)
             self.player.last_shot_time = self.step_count
-        
+
         return 0.0
+
+    def handle_click(self, pos):
+        """Handle clicks on right-side UI buttons if present."""
+        # Ensure buttons exist
+        if not hasattr(self.renderer, 'buttons') or self.renderer.buttons is None:
+            try:
+                self.renderer.initialize()
+            except Exception:
+                return
+
+        buttons = self.renderer.buttons
+        if not buttons:
+            return
+
+        changed = False
+
+        # Rotation button
+        if buttons.get('rotation') and buttons['rotation'].clicked(pos):
+            self.control_scheme = config.CONTROL_ROTATION
+            self.action_space = spaces.Discrete(config.ACTION_SPACE_ROTATION)
+            self.player.control_scheme = config.CONTROL_ROTATION
+            buttons['rotation'].active = True
+            buttons['directional'].active = False
+            print("Control scheme set to: rotation")
+            changed = True
+
+        # Directional button
+        if buttons.get('directional') and buttons['directional'].clicked(pos):
+            self.control_scheme = config.CONTROL_DIRECTIONAL
+            self.action_space = spaces.Discrete(config.ACTION_SPACE_DIRECTIONAL)
+            self.player.control_scheme = config.CONTROL_DIRECTIONAL
+            buttons['directional'].active = True
+            buttons['rotation'].active = False
+            print("Control scheme set to: directional")
+            changed = True
+
+        # Switch (one-click) button: toggle between schemes
+        if buttons.get('switch') and buttons['switch'].clicked(pos):
+            if self.control_scheme == config.CONTROL_ROTATION:
+                self.control_scheme = config.CONTROL_DIRECTIONAL
+                self.action_space = spaces.Discrete(config.ACTION_SPACE_DIRECTIONAL)
+                self.player.control_scheme = config.CONTROL_DIRECTIONAL
+                buttons['directional'].active = True
+                buttons['rotation'].active = False
+                print("Switched to directional control")
+            else:
+                self.control_scheme = config.CONTROL_ROTATION
+                self.action_space = spaces.Discrete(config.ACTION_SPACE_ROTATION)
+                self.player.control_scheme = config.CONTROL_ROTATION
+                buttons['rotation'].active = True
+                buttons['directional'].active = False
+                print("Switched to rotation control")
+            changed = True
+
+        # Fast mode toggle
+        if buttons.get('fast') and buttons['fast'].clicked(pos):
+            self.fast_mode = not self.fast_mode
+            buttons['fast'].toggle = self.fast_mode
+            print(f"Fast mode {'ENABLED' if self.fast_mode else 'DISABLED'}")
+
+        # Human control toggle
+        if buttons.get('human') and buttons['human'].clicked(pos):
+            self.human_mode = not self.human_mode
+            buttons['human'].toggle = self.human_mode
+            print(f"Human control {'ENABLED' if self.human_mode else 'DISABLED'}")
+
+        # If click was not on any UI element, treat it as a world click (aim)
+        ui_clicked = any(b.rect.collidepoint(pos) for b in buttons.values())
+        if not ui_clicked:
+            # Only accept clicks as aim/shoot when in human mode
+            if self.human_mode:
+                # Record last click position
+                self.last_click_pos = pos
+                # If human & directional, shoot immediately towards click
+                if self.control_scheme == config.CONTROL_DIRECTIONAL:
+                    self.player_shoot(target_pos=pos)
+            else:
+                # Ignore world clicks while AI is controlling the agent
+                # (prevents accidental human input from affecting learning)
+                pass
+
+        # If control scheme changed, reset the environment to a clean state
+        if changed:
+            try:
+                self.reset()
+                print("Environment reset after control scheme change")
+            except Exception as e:
+                print(f"Error resetting environment after control change: {e}")
+
+    # Helper methods for keyboard shortcuts and human action mapping
+    def toggle_human_mode(self):
+        self.human_mode = not self.human_mode
+        if getattr(self.renderer, 'buttons', None) and 'human' in self.renderer.buttons:
+            self.renderer.buttons['human'].toggle = self.human_mode
+        print(f"Human control {'ENABLED' if self.human_mode else 'DISABLED'}")
+
+    def toggle_fast_mode(self):
+        self.fast_mode = not self.fast_mode
+        if getattr(self.renderer, 'buttons', None) and 'fast' in self.renderer.buttons:
+            self.renderer.buttons['fast'].toggle = self.fast_mode
+        print(f"Fast mode {'ENABLED' if self.fast_mode else 'DISABLED'}")
+
+    def toggle_control(self):
+        # Switch between rotation and directional and reset environment
+        if self.control_scheme == config.CONTROL_ROTATION:
+            self.control_scheme = config.CONTROL_DIRECTIONAL
+            self.action_space = spaces.Discrete(config.ACTION_SPACE_DIRECTIONAL)
+            self.player.control_scheme = config.CONTROL_DIRECTIONAL
+        else:
+            self.control_scheme = config.CONTROL_ROTATION
+            self.action_space = spaces.Discrete(config.ACTION_SPACE_ROTATION)
+            self.player.control_scheme = config.CONTROL_ROTATION
+
+        # Update UI active state
+        try:
+            if getattr(self.renderer, 'buttons', None):
+                b = self.renderer.buttons
+                b['rotation'].active = (self.control_scheme == config.CONTROL_ROTATION)
+                b['directional'].active = (self.control_scheme == config.CONTROL_DIRECTIONAL)
+        except Exception:
+            pass
+
+        # Reset environment for new control scheme
+        try:
+            self.reset()
+            print("Control scheme toggled and environment reset")
+        except Exception as e:
+            print(f"Error resetting environment after toggling control: {e}")
+
+    def get_human_action(self):
+        """Map current keyboard state to a discrete action depending on the control scheme.
+
+        Controls changed to WASD:
+        - Rotation scheme: W = thrust, A = rotate left, D = rotate right, Space = shoot
+        - Directional scheme: W/A/S/D = up/left/down/right, Space = shoot
+        """
+        keys = pygame.key.get_pressed()
+        # Prioritize shooting
+        if keys[pygame.K_SPACE]:
+            return 4 if self.control_scheme == config.CONTROL_ROTATION else 5
+
+        if self.control_scheme == config.CONTROL_ROTATION:
+            # rotation: 0=no-op, 1=thrust, 2=rotate_left, 3=rotate_right, 4=shoot
+            if keys[pygame.K_w]:
+                return 1
+            if keys[pygame.K_a]:
+                return 2
+            if keys[pygame.K_d]:
+                return 3
+            return 0
+        else:
+            # directional: 0=no-op,1=up,2=down,3=left,4=right,5=shoot
+            if keys[pygame.K_w]:
+                return 1
+            if keys[pygame.K_s]:
+                return 2
+            if keys[pygame.K_a]:
+                return 3
+            if keys[pygame.K_d]:
+                return 4
+            return 0
     
     def update_spawners(self):
         for spawner in self.spawners:
@@ -358,8 +537,25 @@ class ArenaEnvironment(gym.Env):
             len(self.enemies),
             len(self.spawners)
         )
+
+        # Sync UI active states with current control scheme
+        try:
+            if getattr(self.renderer, 'buttons', None):
+                b = self.renderer.buttons
+                b['rotation'].active = (self.control_scheme == config.CONTROL_ROTATION)
+                b['directional'].active = (self.control_scheme == config.CONTROL_DIRECTIONAL)
+        except Exception:
+            pass
+
+        # Draw the right-side menu (buttons)
+        try:
+            self.renderer.draw_menu(pygame.mouse.get_pos())
+        except Exception:
+            pass
         
-        self.renderer.update_display()
+        # Use scaled FPS when fast_mode is enabled
+        fps_scale = 2 if self.fast_mode else 1
+        self.renderer.update_display(fps_scale=fps_scale)
     
     def close(self):
         self.renderer.close()
