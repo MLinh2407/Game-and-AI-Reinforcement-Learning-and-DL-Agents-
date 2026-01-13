@@ -22,36 +22,66 @@ def draw_text(screen, text, x, y, size=18, color=(230, 230, 230)):
     font = pygame.font.SysFont("consolas", size)
     screen.blit(font.render(text, True, color), (x, y))
 
-# Save a training curve showing episode rewards over time
-def save_training_curve(rewards, algo, level_id, intrinsic_suffix=""):
-    if len(rewards) < 2:
+# Save a training curve showing episode rewards and steps over time
+def save_training_curve(rewards, episode_lengths, algo, level_id, intrinsic_suffix=""):
+    if len(rewards) < 2 or len(episode_lengths) < 2:
         return
-    
+
     window = 50
     os.makedirs("plots", exist_ok=True)
 
-    plt.figure(figsize=(6, 4))
-    plt.plot(rewards, label="Episode reward", alpha=0.7, linewidth=1)
+    episodes = list(range(1, len(rewards) + 1))
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 6), sharex=True)
+
+    # Rewards subplot
+    ax1.plot(episodes, rewards, label="Episode reward", alpha=0.7, linewidth=1)
 
     if len(rewards) >= window:
-        smooth = [
+        smooth_rewards = [
             sum(rewards[max(0, i - window):i + 1]) /
             (i - max(0, i - window) + 1)
             for i in range(len(rewards))
         ]
-        plt.plot(smooth, label=f"Average reward", linewidth=2)
+        ax1.plot(episodes, smooth_rewards, label="Avg reward", linewidth=2)
 
-    plt.xlabel("Episode")
-    plt.ylabel("Total Reward")
-    plt.title(f"{algo} – Level {level_id}{intrinsic_suffix}")
-    plt.legend()
-    plt.tight_layout()
+    ax1.set_ylabel("Reward")
+    ax1.set_title(f"{algo} – Level {level_id}{intrinsic_suffix}")
+    ax1.legend()
+
+    # Steps subplot
+    ax2.plot(episodes, episode_lengths, label="Episode steps", color="orange", alpha=0.7, linewidth=1)
+
+    if len(episode_lengths) >= window:
+        smooth_steps = [
+            sum(episode_lengths[max(0, i - window):i + 1]) /
+            (i - max(0, i - window) + 1)
+            for i in range(len(episode_lengths))
+        ]
+        ax2.plot(episodes, smooth_steps, label="Avg steps", color="red", linewidth=2)
+
+    ax2.set_xlabel("Episode")
+    ax2.set_ylabel("Steps")
+    ax2.legend()
+
+    fig.tight_layout()
 
     path = f"plots/{algo}_level{level_id}{intrinsic_suffix}_training.png"
-    plt.savefig(path)
-    plt.close()
+    fig.savefig(path)
+    plt.close(fig)
 
     print(f"[Saved training curve] {path}")
+
+# Compute the maximum achievable environment reward for a level
+def level_max_env_reward(level_grid):
+    total = 0
+    for row in level_grid:
+        for tile in row:
+            if tile == APPLE:
+                total += 1
+            elif tile == CHEST:
+                total += 2
+    return total
 
 # --------------------------------------------------
 # Main application
@@ -90,6 +120,7 @@ def main():
 
     # Initialize environment and agent state
     env = GridWorld(LEVELS[level_id])
+    level_max_env_reward = level_max_env_reward(LEVELS[level_id])
     state = env.reset()
     action = agent.select_action(state)
 
@@ -123,7 +154,7 @@ def main():
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 suffix = "_intrinsic" if use_intrinsic else ""
-                save_training_curve(rewards, algo_name, level_id, suffix)
+                save_training_curve(rewards, episode_lengths, algo_name, level_id, suffix)
                 running = False
 
             if e.type == pygame.MOUSEBUTTONDOWN:
@@ -151,6 +182,7 @@ def main():
                         level_id = i
                         EPISODES = config.EPISODES_PER_LEVEL.get(level_id, config.DEFAULT_EPISODES)
                         EPSILON_DECAY = int(0.80 * EPISODES)
+                        level_max_env_reward = level_max_env_reward(LEVELS[level_id])
 
                         use_intrinsic = False
                         buttons["intrinsic"].toggle = False
@@ -209,7 +241,7 @@ def main():
                     os.makedirs("models", exist_ok=True)
                     suffix = "_intrinsic" if use_intrinsic else ""
                     agent.save(f"models/{algo_name}_level{level_id}{suffix}.pkl")
-                    save_training_curve(rewards, algo_name, level_id, suffix)
+                    save_training_curve(rewards, episode_lengths, algo_name, level_id, suffix)
                         
                 if buttons["load"].clicked(pos):
                     suffix = "_intrinsic" if use_intrinsic else ""
@@ -242,12 +274,18 @@ def main():
                 episode_lengths.append(steps)
                 agent.new_episode()
 
-                # Stop training and save training curve after configured number of episodes
+                # Stop training and save training curve/model after configured number of episodes
                 if agent.episode >= EPISODES:
                     training_done = True
                     paused = True
                     suffix = "_intrinsic" if use_intrinsic else ""
-                    save_training_curve(rewards, algo_name, level_id, suffix)
+                    save_training_curve(rewards, episode_lengths, algo_name, level_id, suffix)
+
+                    # Auto-save trained model
+                    os.makedirs("models", exist_ok=True)
+                    model_path = f"models/{algo_name}_level{level_id}{suffix}.pkl"
+                    agent.save(model_path)
+                    print(f"[Saved model] {model_path}")
 
                     # Print stats
                     print(f"\n{'='*60}")
@@ -301,19 +339,21 @@ def main():
             color = (100, 255, 100) if use_intrinsic else (200, 200, 200)
             draw_text(screen, f"Intrinsic: {intrinsic_status}", px, y, color=color); y += line
         
-        draw_text(screen, f"Env Reward: {episode_reward}", px, y); y += line
+        # Current episode rewards
+        draw_text(screen, f"Env Reward: {episode_reward} / {level_max_env_reward}", px, y,); y += line
         
         if use_intrinsic and episode_intrinsic_reward > 0:
             draw_text(screen, f"Intrinsic: +{episode_intrinsic_reward:.2f}", px, y, color=(150, 150, 255)); y += line
 
+        # Rolling average rewards over the last window episodes
         if len(rewards) >= window:
-            avg = sum(rewards[-window:]) / window
-            draw_text(screen, f"Avg Reward ({window}): {avg:.2f}", px, y)
+            avg_env = sum(rewards[-window:]) / window
+            draw_text(screen, f"Avg Reward: {avg_env:.2f} / {level_max_env_reward:.2f}", px, y)
             y += line
 
         if len(episode_lengths) >= window:
             avg_steps = sum(episode_lengths[-window:]) / window
-            draw_text(screen, f"Avg Steps ({window}): {avg_steps:.1f}", px, y)
+            draw_text(screen, f"Avg Steps: {avg_steps:.1f}", px, y)
             y += line
 
         if training_done:

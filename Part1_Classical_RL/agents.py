@@ -7,7 +7,7 @@ from constants import ACTIONS
 
 # Base class shared by Q-Learning and SARSA agents
 class BaseAgent:
-    def __init__(self, epsilon_decay_episodes, intrinsic_reward=False, beta=0.1):
+    def __init__(self, epsilon_decay_episodes, intrinsic_reward=False):
         self.Q = {}
         self.actions = list(ACTIONS.keys())
         self.episode = 0
@@ -16,7 +16,6 @@ class BaseAgent:
 
     # Intrinsic reward settings
         self.use_intrinsic_reward = intrinsic_reward
-        self.beta = beta 
         self.state_visit_count = {} 
         self.total_state_visits = {} 
         
@@ -64,7 +63,8 @@ class BaseAgent:
         # Number of times the current state has been visited
         n_s = self.state_visit_count[state]
         
-        intrinsic_reward = self.beta / np.sqrt(n_s)
+        # Intrinsic bonus
+        intrinsic_reward = config.INTRINSIC_REWARD_STRENGTH / np.sqrt(n_s + 1)
         return intrinsic_reward
 
     def new_episode(self):
@@ -79,8 +79,7 @@ class BaseAgent:
             pickle.dump({
                 "Q": self.Q,
                 "episode": self.episode,
-                "intrinsic_reward": self.intrinsic_reward,
-                "beta": self.beta,
+                "intrinsic_reward": self.use_intrinsic_reward,
                 "total_state_visits": self.total_state_visits
             }, f)
 
@@ -91,8 +90,7 @@ class BaseAgent:
             self.Q = data["Q"]
             self.episode = data["episode"]
             if "intrinsic_reward" in data:
-                self.intrinsic_reward = data["intrinsic_reward"]
-                self.beta = data.get("beta", 0.1)
+                self.use_intrinsic_reward = data["intrinsic_reward"]
                 self.total_state_visits = data.get("total_state_visits", {})
 
 class QLearningAgent(BaseAgent):
