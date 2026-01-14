@@ -1,7 +1,7 @@
 import pygame
 import config
 
-# UI buttons (borrowed style from Part1)
+# UI buttons
 class Button:
     def __init__(self, rect, text):
         self.rect = pygame.Rect(rect)
@@ -45,19 +45,16 @@ def create_ui(width):
     """Create a simple right-side UI with control scheme buttons and a fast-mode toggle."""
     buttons = {}
 
-    x = width - 220
+    x = width - 195
     # Control scheme buttons
     buttons["rotation"] = Button((x, 30, 180, 36), "Rotation")
     buttons["directional"] = Button((x, 80, 180, 36), "Directional")
 
     # Fast-mode toggle (speeds rendering/step rate)
-    buttons["fast"] = Button((x, 180, 180, 36), "Fast Mode")
-
-    # Switch quick button
-    buttons["switch"] = Button((x, 130, 180, 36), "Switch Control")
+    buttons["fast"] = Button((x, 130, 180, 36), "Fast Mode")
 
     # Human control toggle
-    buttons["human"] = Button((x, 230, 180, 36), "Human Control")
+    buttons["human"] = Button((x, 180, 180, 36), "Human Control")
     buttons["human"].toggle = False
 
     # Start with rotation active by default

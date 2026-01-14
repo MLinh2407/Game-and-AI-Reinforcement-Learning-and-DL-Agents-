@@ -94,7 +94,7 @@ def main():
     )
     
     # Train the model
-    total_timesteps = 100000
+    total_timesteps = 300000
     print(f"\nStarting training for {total_timesteps} timesteps...")
     print(f"TensorBoard logs: logs/tensorboard/directional")
     print(f"Model will be saved to: models/ppo_directional")
