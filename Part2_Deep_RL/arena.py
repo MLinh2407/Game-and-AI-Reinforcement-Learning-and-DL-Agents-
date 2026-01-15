@@ -141,7 +141,7 @@ class ArenaEnvironment(gym.Env):
         reward += config.REWARD_SURVIVAL
         # Small shaping: penalise keeping many spawners alive to
         # encourage the agent to target them instead of farming enemies.
-        reward -= 0.01 * len(self.spawners)
+        reward -= 0.2 * len(self.spawners)
 
         # Extra shaping for rotation control: reward the agent slightly
         # for pointing its nose toward the nearest spawner. This helps
@@ -459,6 +459,10 @@ class ArenaEnvironment(gym.Env):
                         spawners_to_remove.append(j)
                         reward += config.REWARD_SPAWNER_DESTROY
                         self.spawners_destroyed += 1
+                        # Distance-based reward for rotation control to encourage kiting/movement
+                        if self.control_scheme == config.CONTROL_ROTATION:
+                            dist = np.linalg.norm(self.player.pos - spawner.pos)
+                            reward += 1.0 * (dist / 100.0)
                         # Remember where the last spawner died so the
                         # phase completion explosion can appear there.
                         self.last_destroyed_spawner_pos = spawner.pos.copy()

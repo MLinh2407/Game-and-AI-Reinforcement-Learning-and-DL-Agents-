@@ -93,7 +93,7 @@ def main():
     )
     
     # Train the model
-    total_timesteps = 500000
+    total_timesteps = 2000000
     print(f"\nStarting training for {total_timesteps} timesteps...")
     print(f"TensorBoard logs: logs/tensorboard/rotation")
     print(f"Model will be saved to: models/ppo_rotation")
