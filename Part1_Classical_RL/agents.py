@@ -42,7 +42,7 @@ class BaseAgent:
         q_vals = self.Q[state]
         max_q = np.max(q_vals)
         
-        # Random tie-breaking when multiple actions have equal value
+        # Random tie breaking when multiple actions have equal value
         best = [a for a in self.actions if q_vals[a] == max_q]
         return random.choice(best)
 
@@ -72,7 +72,7 @@ class BaseAgent:
         self.step_count = 0
         self.state_visit_count = {}
         
-    # Save the Q-table, training progress and exploration related parameters
+    # Save the Q table, training progress and exploration related parameters
     def save(self, path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:

@@ -2,11 +2,9 @@ import pygame
 import random
 import os
 import config
-
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
 from constants import *
 from levels import LEVELS
 from gridworld import GridWorld
@@ -105,7 +103,7 @@ def main():
     font = pygame.font.SysFont("consolas", 18)
     clock = pygame.time.Clock()
 
-    # Create UI buttons for algorithms, levels, and controls
+    # Create UI buttons for algorithms, levels and controls
     buttons, level_buttons = create_ui(TILE_W)
 
     # Initial state
@@ -144,7 +142,7 @@ def main():
         clock.tick(config.FPS_FAST if fast_mode else config.FPS_VISUAL)
         mouse_pos = pygame.mouse.get_pos()
 
-        # update hover states
+        # Update hover states
         for b in buttons.values():
             b.update_hover(mouse_pos)
         for b in level_buttons:
@@ -201,7 +199,7 @@ def main():
                         paused = True
                         training_done = False
 
-                # Play or Pause training
+                # Play or Pause training selection
                 if buttons["play"].clicked(pos):
                     paused = not paused
                     buttons["play"].toggle = not paused
