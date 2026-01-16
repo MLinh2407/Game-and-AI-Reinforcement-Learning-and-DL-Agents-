@@ -70,27 +70,12 @@ def test_environment(control_scheme='rotation'):
     env.close()
     print("\n✅ Environment closed successfully!")
 
-
 def test_both_controls():
     """Test both control schemes sequentially"""
     print("\n" + "=" * 60)
     print("Testing ROTATION control first...")
     print("=" * 60)
     test_environment(control_scheme=config.CONTROL_ROTATION)
-    
-    # Uncomment to test directional control after rotation
-    # print("\n" + "=" * 60)
-    # print("Testing DIRECTIONAL control...")
-    # print("=" * 60)
-    # test_environment(control_scheme=config.CONTROL_DIRECTIONAL)
-
 
 if __name__ == "__main__":
-    # Test rotation control
-    #test_environment(control_scheme='rotation')
-    
-    # To test directional control instead, use:
     test_environment(control_scheme='directional')
-    
-    # To test both sequentially:
-    # test_both_controls()

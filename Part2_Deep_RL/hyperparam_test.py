@@ -1,16 +1,11 @@
-"""
-Quick hyperparameter testing script for rotation control
-Run shorter training runs to compare different hyperparameters
-"""
-
 import os
+import config
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 import torch.nn as nn
 from arena import ArenaEnvironment
-import config
 
 os.makedirs("models/hyperparam_tests", exist_ok=True)
 
@@ -19,8 +14,8 @@ def make_env():
     env = Monitor(env)
     return env
 
+# Test different learning rates
 def test_learning_rates():
-    """Test different learning rates"""
     learning_rates = [1e-4, 3e-4, 1e-3]
     
     print("=" * 60)
@@ -53,15 +48,15 @@ def test_learning_rates():
             verbose=0
         )
         
-        # Train for shorter duration (100K steps for quick comparison)
+        # Train for 100K steps
         model.learn(total_timesteps=100000, progress_bar=True)
         model.save(f"models/hyperparam_tests/lr_{lr}")
         
         env.close()
         print(f"✅ Saved model with LR={lr}")
 
+# Test different entropy coefficients
 def test_entropy_coefficients():
-    """Test different entropy coefficients"""
     entropy_values = [0.0, 0.01, 0.05]
     
     print("\n" + "=" * 60)
@@ -100,8 +95,8 @@ def test_entropy_coefficients():
         env.close()
         print(f"✅ Saved model with entropy={ent}")
 
+# Test different network sizes
 def test_network_sizes():
-    """Test different network sizes"""
     network_sizes = [128, 256, 512]
     
     print("\n" + "=" * 60)
@@ -140,8 +135,8 @@ def test_network_sizes():
         env.close()
         print(f"✅ Saved model with network size={size}")
 
+# Test different discount factors
 def test_gamma_values():
-    """Test different discount factors"""
     gamma_values = [0.95, 0.99]
     
     print("\n" + "=" * 60)
@@ -186,14 +181,13 @@ if __name__ == "__main__":
     print("=" * 60)
     
     # Run all tests
-    test_learning_rates()      # ~30 min
-    test_entropy_coefficients() # ~30 min
-    test_network_sizes()       # ~45 min (512 is slower)
-    test_gamma_values()        # ~30 min
+    test_learning_rates()      
+    test_entropy_coefficients() 
+    test_network_sizes()       
+    test_gamma_values()       
     
     print("\n" + "=" * 60)
     print("✅ All hyperparameter tests completed!")
     print("=" * 60)
     print("\nTo view results in TensorBoard:")
     print("  tensorboard --logdir logs/tensorboard")
-    print("\nYou can now compare the learning curves for different hyperparameters")

@@ -3,7 +3,6 @@ import numpy as np
 import config
 from assets import load_assets
 
-
 class Renderer:
     # Return a color based on remaining health ratio
     @staticmethod
@@ -21,14 +20,14 @@ class Renderer:
         self.clock = pygame.time.Clock()
         self.font = None
 
-        # Sprites (loaded once)
+        # Sprites
         self.background = None
         self.player_sprite = None
         self.enemy_sprite = None
         self.spawner_sprite = None
         self.bullet_sprite = None
         self.assets_loaded = False
-        # UI buttons (created on initialize)
+        # UI buttons 
         self.buttons = None
 
     # Initialize pygame window and load assets
@@ -49,7 +48,7 @@ class Renderer:
                 ) = load_assets()
                 self.assets_loaded = True
 
-            # Create UI buttons (right side)
+            # Create UI buttons 
             if self.buttons is None:
                 try:
                     from ui import create_ui
@@ -202,7 +201,7 @@ class Renderer:
             pygame.draw.circle(self.screen, (255, 255, 255), pos, 3)
 
     def draw_ui(self, player_health, phase, enemy_count, spawner_count):
-        # Semi-transparent background (top-left corner)
+        # Semi transparent background
         ui_bg = pygame.Surface((200, 120))
         ui_bg.set_alpha(128)
         ui_bg.fill((0, 0, 0))
@@ -232,8 +231,6 @@ class Renderer:
         self.screen.blit(spawners_text, (text_x, bg_y + 85))
 
     def draw_phase_banner(self, phase):
-        """Draw a temporary banner near the top centre indicating
-        the current phase. Called for a few frames after phase start."""
         if not self.font:
             return
 
@@ -250,7 +247,6 @@ class Renderer:
         self.screen.blit(text, (rect.x + padding_x // 2, rect.y + padding_y // 2))
 
     def draw_menu(self, mouse_pos):
-        """Draw right-side menu buttons if present."""
         if not self.buttons:
             return
 
@@ -260,7 +256,7 @@ class Renderer:
 
         # Header
         header = self.font.render("Controls", True, config.COLOR_UI)
-        # Position control board at top-right corner
+
         x = self.width - 195
         y = 5
         pygame.draw.rect(self.screen, (0, 0, 0), (x - 10, y, 200, 220))
@@ -270,17 +266,8 @@ class Renderer:
         for b in self.buttons.values():
             b.draw(self.screen, self.font)
 
-        # # Current control label
-        # try:
-        #     cur = next(k for k, v in self.buttons.items() if v.active)
-        #     label = self.font.render(f"Active: {cur}", True, config.COLOR_UI)
-        #     self.screen.blit(label, (x + 10, y + 200))
-        # except StopIteration:
-        #     pass
-
     def update_display(self, fps_scale=1):
         pygame.display.flip()
-        # Allow fast-mode scaling when requested
         self.clock.tick(int(config.FPS * fps_scale))
 
     def close(self):

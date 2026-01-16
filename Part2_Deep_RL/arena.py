@@ -2,7 +2,6 @@ import pygame
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-
 import config
 from player import Player
 from enemy import Enemy
@@ -10,7 +9,6 @@ from spawner import Spawner
 from projectile import Projectile
 from particles import ParticleSystem
 from rendering import Renderer
-
 
 class ArenaEnvironment(gym.Env):
     def __init__(self, control_scheme="rotation", render_mode=None):
@@ -49,19 +47,16 @@ class ArenaEnvironment(gym.Env):
         self.step_count = 0
         self.max_steps = config.MAX_STEPS
 
-        # Fast mode (affects rendering/step tick scaling)
+        # Fast mode 
         self.fast_mode = False
-        # Human control mode: when True, player is controlled by keyboard
+        # Human control mode
         self.human_mode = False
 
-        # Last world click position (used only for rotation aiming UI if desired)
         self.last_click_pos = None
 
-        # Frames remaining to display phase completion banner
         self.phase_effect_timer = 0
 
-        # Store position of the last destroyed spawner so we can
-        # place phase-completion effects at its location
+        # Store position of the last destroyed spawner
         self.last_destroyed_spawner_pos = None
 
         # Stats
@@ -115,8 +110,7 @@ class ArenaEnvironment(gym.Env):
         if len(self.spawners) == 0:
             reward += config.REWARD_PHASE_COMPLETE
             self.current_phase += 1
-            # Phase-completion effect at the last destroyed spawner
-            # position if available, otherwise fallback to player.
+            # Phase completion effect at the last destroyed spawner
             effect_pos = (
                 self.last_destroyed_spawner_pos
                 if self.last_destroyed_spawner_pos is not None
@@ -125,7 +119,7 @@ class ArenaEnvironment(gym.Env):
             self.particle_system.phase_complete_effect(effect_pos)
             self.spawn_phase_spawners()
             # Trigger a short on-screen phase banner
-            self.phase_effect_timer = 120  # ~2 seconds at 60 FPS
+            self.phase_effect_timer = 120 
 
         # Check termination
         done = False
@@ -137,15 +131,11 @@ class ArenaEnvironment(gym.Env):
         if self.step_count >= self.max_steps:
             done = True
 
-        # Time-based reward/penalty
+        # Time-based reward and penalty in order to encourage shooting
         reward += config.REWARD_SURVIVAL
-        # Small shaping: penalise keeping many spawners alive to
-        # encourage the agent to target them instead of farming enemies.
         reward -= 0.2 * len(self.spawners)
 
-        # Extra shaping for rotation control: reward the agent slightly
-        # for pointing its nose toward the nearest spawner. This helps
-        # the rotation agent learn to aim instead of firing sideways.
+        # Reward helps the rotation agent learn to aim instead of firing sideways
         if self.control_scheme == config.CONTROL_ROTATION:
             nearest_spawner = self.nearest_spawner()
             if nearest_spawner is not None:
@@ -154,7 +144,7 @@ class ArenaEnvironment(gym.Env):
                 # Smallest signed angle difference in [-pi, pi]
                 delta = angle_to_spawner - self.player.angle
                 delta = (delta + np.pi) % (2 * np.pi) - np.pi
-                alignment = np.cos(delta)  # 1 when aligned, -1 opposite
+                alignment = np.cos(delta)  
                 reward += 0.01 * alignment
 
         observation = self.get_observation()
@@ -212,24 +202,13 @@ class ArenaEnvironment(gym.Env):
             elif action == 4:
                 self.player.move_direction("right")
             elif action == 5:
-                # Directional control: shooting does not aim toward a target;
-                # bullets always fire along the ship's current facing direction.
                 reward += self.player_shoot()
 
         return reward
 
     # Handle player shooting
     def player_shoot(self, target_pos=None):
-        """Shoot a bullet.
-
-        - Rotation control: always fire along the ship's current angle.
-        - Directional control: always fire along the ship's discrete facing
-          direction (set by last movement). Mouse/world clicks do not change
-          bullet direction in directional mode."""
         if self.player.can_shoot(self.step_count):
-            # For both schemes, Player.shoot_velocity decides direction;
-            # we pass through target_pos only for rotation if you later
-            # want mouse-aim, but directional ignores it.
             if self.control_scheme != config.CONTROL_ROTATION:
                 target_pos = None
 
@@ -243,7 +222,6 @@ class ArenaEnvironment(gym.Env):
         return 0.0
 
     def handle_click(self, pos):
-        """Handle clicks on right-side UI buttons if present."""
         # Ensure buttons exist
         if not hasattr(self.renderer, "buttons") or self.renderer.buttons is None:
             try:
@@ -277,34 +255,26 @@ class ArenaEnvironment(gym.Env):
             print("Control scheme set to: directional")
             changed = True
 
-        # Fast mode toggle
+        # Fast mode button
         if buttons.get("fast") and buttons["fast"].clicked(pos):
             self.fast_mode = not self.fast_mode
             buttons["fast"].toggle = self.fast_mode
             print(f"Fast mode {'ENABLED' if self.fast_mode else 'DISABLED'}")
 
-        # Human control toggle
+        # Human control button
         if buttons.get("human") and buttons["human"].clicked(pos):
             self.human_mode = not self.human_mode
             buttons["human"].toggle = self.human_mode
             print(f"Human control {'ENABLED' if self.human_mode else 'DISABLED'}")
 
-        # If click was not on any UI element, optionally treat it as a world
-        # click for rotation aiming only. Directional bullets never use
-        # mouse-based aiming.
         ui_clicked = any(b.rect.collidepoint(pos) for b in buttons.values())
         if not ui_clicked:
             # Only accept clicks as aim/shoot when in human mode
             if self.human_mode:
-                # For rotation control you may choose to use mouse aiming;
-                # for directional control we ignore world clicks so shots
-                # always follow the facing direction.
                 if self.control_scheme == config.CONTROL_ROTATION:
                     self.last_click_pos = pos
                     self.player_shoot(target_pos=pos)
             else:
-                # Ignore world clicks while AI is controlling the agent
-                # (prevents accidental human input from affecting learning)
                 pass
 
         # If control scheme changed, reset the environment to a clean state
@@ -358,8 +328,7 @@ class ArenaEnvironment(gym.Env):
             print(f"Error resetting environment after toggling control: {e}")
 
     def get_human_action(self):
-        """Map current keyboard state to a discrete action depending on the control scheme.
-
+        """
         Controls changed to WASD:
         - Rotation scheme: W = thrust, A = rotate left, D = rotate right, Space = shoot
         - Directional scheme: W/A/S/D = up/left/down/right, Space = shoot
@@ -459,18 +428,14 @@ class ArenaEnvironment(gym.Env):
                         spawners_to_remove.append(j)
                         reward += config.REWARD_SPAWNER_DESTROY
                         self.spawners_destroyed += 1
-                        # Distance-based reward for rotation control to encourage kiting/movement
+                        # Distance based reward for rotation control to encourage kiting/movementư
                         if self.control_scheme == config.CONTROL_ROTATION:
                             dist = np.linalg.norm(self.player.pos - spawner.pos)
                             reward += 1.0 * (dist / 100.0)
-                        # Remember where the last spawner died so the
-                        # phase completion explosion can appear there.
                         self.last_destroyed_spawner_pos = spawner.pos.copy()
                         self.particle_system.spawner_explosion(spawner.pos)
                     else:
-                        # Non-lethal hit on a spawner: give a small
-                        # positive reward to encourage repeatedly
-                        # shooting spawners, not just enemies.
+                        # Spawner hit: give a small positive reward to encourage repeatedly
                         reward += config.REWARD_SPAWNER_HIT
                         self.particle_system.hit_effect(
                             spawner.pos, config.COLOR_EXPLOSION_SPAWNER
@@ -560,8 +525,7 @@ class ArenaEnvironment(gym.Env):
 
         self.renderer.draw_player(self.player)
 
-        # Draw particles after entities so explosions and effects
-        # appear on top instead of being hidden behind spawners.
+        # Draw particles
         self.renderer.draw_particles(self.particle_system.get_particles())
 
         self.renderer.draw_ui(
@@ -571,7 +535,7 @@ class ArenaEnvironment(gym.Env):
             len(self.spawners),
         )
 
-        # Optional phase completion banner when a new phase has just started
+        # Phase completion banner when a new phase has just started
         if self.phase_effect_timer > 0:
             self.renderer.draw_phase_banner(self.current_phase)
             self.phase_effect_timer -= 1
@@ -587,7 +551,7 @@ class ArenaEnvironment(gym.Env):
         except Exception:
             pass
 
-        # Draw the right-side menu (buttons)
+        # Draw the right side menu 
         try:
             self.renderer.draw_menu(pygame.mouse.get_pos())
         except Exception:

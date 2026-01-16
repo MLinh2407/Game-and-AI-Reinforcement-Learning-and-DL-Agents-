@@ -1,25 +1,13 @@
-"""
-Evaluation script for rotation control scheme.
-Loads a trained model and plays it visually in the arena.
-"""
-
 import pygame
 import sys
 import os
-from stable_baselines3 import PPO
-
-from arena import ArenaEnvironment
 import config
+import numpy as np
+from stable_baselines3 import PPO
+from arena import ArenaEnvironment
 
+# Load and evaluate a trained model visually
 def evaluate_model(model_path="models/ppo_rotation", num_episodes=5):
-    """
-    Load and evaluate a trained model visually.
-    
-    Args:
-        model_path: Path to the saved model (without .zip extension)
-        num_episodes: Number of episodes to run
-    """
-    # Check if model exists
     model_file = f"{model_path}.zip"
     if not os.path.exists(model_file):
         print(f"❌ Error: Model file not found: {model_file}")
@@ -50,6 +38,10 @@ def evaluate_model(model_path="models/ppo_rotation", num_episodes=5):
     
     episode_rewards = []
     episode_stats = []
+    episode_phases = []
+    episode_enemies = []
+    episode_spawners = []
+    episode_lengths = []
     
     for episode in range(num_episodes):
         obs, info = env.reset()
@@ -88,10 +80,9 @@ def evaluate_model(model_path="models/ppo_rotation", num_episodes=5):
             total_reward += reward
             step_count += 1
             
-            # Render the environment
             env.render()
             
-            # Small delay for visual clarity (optional, can be removed for faster evaluation)
+            # Small delay for visual clarity
             pygame.time.delay(10)
         
         episode_rewards.append(total_reward)
@@ -102,6 +93,10 @@ def evaluate_model(model_path="models/ppo_rotation", num_episodes=5):
             'player_health': info.get('player_health', 0),
             'steps': step_count
         })
+        episode_phases.append(info.get('phase', 0))
+        episode_enemies.append(info.get('enemies_destroyed', 0))
+        episode_spawners.append(info.get('spawners_destroyed', 0))
+        episode_lengths.append(step_count)
         
         print(f"  Episode {episode + 1} finished:")
         print(f"    Total reward: {total_reward:.2f}")
@@ -111,16 +106,16 @@ def evaluate_model(model_path="models/ppo_rotation", num_episodes=5):
         print(f"    Spawners destroyed: {episode_stats[-1]['spawners_destroyed']}")
         print(f"    Final health: {episode_stats[-1]['player_health']}")
     
-    # Print summary statistics
+    # Calculate statistics
     print("\n" + "=" * 60)
-    print("Evaluation Summary")
+    print("PERFORMANCE METRICS")
     print("=" * 60)
-    print(f"Average reward: {sum(episode_rewards) / len(episode_rewards):.2f}")
-    print(f"Max reward: {max(episode_rewards):.2f}")
-    print(f"Min reward: {min(episode_rewards):.2f}")
-    print(f"\nAverage phase reached: {sum(s['phase'] for s in episode_stats) / len(episode_stats):.2f}")
-    print(f"Average enemies destroyed: {sum(s['enemies_destroyed'] for s in episode_stats) / len(episode_stats):.2f}")
-    print(f"Average spawners destroyed: {sum(s['spawners_destroyed'] for s in episode_stats) / len(episode_stats):.2f}")
+    print(f"Average Reward: {np.mean(episode_rewards):.2f} ± {np.std(episode_rewards):.2f}")
+    print(f"Average Phase: {np.mean(episode_phases):.2f}")
+    print(f"Average Enemies Destroyed: {np.mean(episode_enemies):.2f} ± {np.std(episode_enemies):.2f}")
+    print(f"Average Spawners Destroyed: {np.mean(episode_spawners):.2f} ± {np.std(episode_spawners):.2f}")
+    print(f"Average Episode Length: {np.mean(episode_lengths):.2f} ± {np.std(episode_lengths):.2f}")
+    print(f"Success Rate (Phase 3+): {sum(1 for p in episode_phases if p >= 3) / len(episode_phases) * 100:.1f}%")
     print("=" * 60)
     
     env.close()

@@ -1,7 +1,6 @@
 import numpy as np
 import config
 
-
 class Player:
     def __init__(self, x, y, control_scheme="rotation"):
         self.pos = np.array([x, y], dtype=np.float32)
@@ -81,8 +80,6 @@ class Player:
             angle = self.angle
         else:
             # Directional control: bullets always fire straight up
-            # in world coordinates. The ship's angle remains fixed;
-            # only its position changes.
             vel = np.array([0.0, -config.BULLET_SPEED])
             angle = -np.pi / 2
 

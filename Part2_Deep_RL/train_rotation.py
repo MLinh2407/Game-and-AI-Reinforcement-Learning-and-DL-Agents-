@@ -1,13 +1,8 @@
-"""
-Training script for rotation control scheme using Stable Baselines3 PPO.
-Trains an agent with rotation-based controls and saves the model.
-"""
-
 import os
-import numpy as np
 import sys
+import config
 
-# Check if tensorboard is installed (required for logging)
+# Check if tensorboard is installed
 try:
     import tensorboard
 except ImportError:
@@ -22,17 +17,15 @@ from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.env_util import make_vec_env
-
 from arena import ArenaEnvironment
-import config
 
 # Create models directory if it doesn't exist
 os.makedirs("models", exist_ok=True)
 os.makedirs("logs/tensorboard/rotation", exist_ok=True)
 os.makedirs("logs/eval/rotation", exist_ok=True)
 
+# Create the environment
 def make_env():
-    """Create and wrap the environment"""
     env = ArenaEnvironment(control_scheme=config.CONTROL_ROTATION, render_mode=None)
     env = Monitor(env, "logs/eval/rotation")
     return env
@@ -42,21 +35,20 @@ def main():
     print("Training PPO Agent - Rotation Control Scheme")
     print("=" * 60)
     
-    # Create vectorized environment (1 environment for training)
+    # Create vectorized environment 
     env = make_vec_env(make_env, n_envs=1)
     
-    # Define custom policy network architecture
     # Policy network: [256, 256] hidden layers with tanh activation
     policy_kwargs = dict(
         net_arch=[dict(pi=[256, 256], vf=[256, 256])],
         activation_fn=nn.Tanh
     )
     
-    # Hyperparameters (tuned for this environment)
+    # Hyperparameters 
     model = PPO(
         "MlpPolicy",
         env,
-        learning_rate=3e-4,           # Learning rate
+        learning_rate=3e-4,            # Learning rate
         n_steps=2048,                  # Steps per update
         batch_size=64,                 # Batch size
         n_epochs=10,                   # Number of optimization epochs per update
@@ -85,7 +77,7 @@ def main():
         n_eval_episodes=5
     )
     
-    # Checkpoint callback (save periodically)
+    # Checkpoint callback 
     checkpoint_callback = CheckpointCallback(
         save_freq=50000,
         save_path="models/checkpoints/rotation/",

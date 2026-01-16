@@ -1,15 +1,10 @@
-"""
-Quick evaluation script to get performance numbers for all hyperparameter tests
-Run this AFTER the hyperparameter testing script completes
-"""
-
 import numpy as np
 from stable_baselines3 import PPO
 from arena import ArenaEnvironment
 import config
 
+# Quickly evaluate a model without rendering
 def quick_evaluate(model_path, n_episodes=5):
-    """Quickly evaluate a model without rendering"""
     model = PPO.load(model_path)
     env = ArenaEnvironment(control_scheme=config.CONTROL_ROTATION, render_mode=None)
     
@@ -38,9 +33,8 @@ def quick_evaluate(model_path, n_episodes=5):
         'avg_phase': np.mean(phases)
     }
 
+# Evaluate all hyperparameter test models
 def evaluate_all_hyperparameters():
-    """Evaluate all hyperparameter test models"""
-    
     print("\n" + "=" * 70)
     print("HYPERPARAMETER EVALUATION RESULTS")
     print("=" * 70)

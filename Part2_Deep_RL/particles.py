@@ -1,12 +1,7 @@
-"""
-Particle effects system
-Handles explosions, trails, and other visual effects
-"""
-
 import numpy as np
 import config
 
-
+# Particle effects system (handles explosions, trails, and other visual effects)
 class Particle:
     def __init__(self, x, y, vx, vy, color, life):
         self.pos = np.array([x, y], dtype=np.float32)
@@ -31,7 +26,6 @@ class Particle:
     # Get size based on remaining life
     def get_size(self):
         return max(1, int(3 * (self.life / self.max_life)))
-
 
 class ParticleSystem:
     def __init__(self):
@@ -85,8 +79,6 @@ class ParticleSystem:
 
     # Create effect for completing a phase
     def phase_complete_effect(self, pos):
-        # Use spawner explosion color and phase particle count so
-        # phase completion looks like a big spawner-style blast.
         self.create_explosion(
             pos, config.COLOR_EXPLOSION_SPAWNER, config.PARTICLE_EXPLOSION_COUNT_PHASE
         )
