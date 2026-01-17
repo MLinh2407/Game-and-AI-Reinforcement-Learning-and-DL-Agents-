@@ -9,7 +9,11 @@ This project implements two reinforcement learning environments from scratch:
 
 **Part I - Gridworld (Classical RL):** A tile-based game where an agent learns to navigate, collect items, and avoid hazards using Q-Learning and SARSA algorithms. This demonstrates fundamental value-based reinforcement learning.
 
+<img width="500" height="300" alt="image" src="https://github.com/user-attachments/assets/44a56d13-fbec-4539-8ed7-1784ba0040fb" /><br><br>
+
 **Part II - Arena (Deep RL):** A real time shooting game where an agent learns to survive enemy waves and destroy spawners using deep reinforcement learning (PPO with neural networks). This demonstrates modern deep RL techniques.
+
+<img width="450" height="300" alt="image" src="https://github.com/user-attachments/assets/f7bad8b6-337d-42f0-a4a7-66f8ee25f383" /><br>
 
 Both environments are built with Pygame and provide visual feedback of the learning process.
 
